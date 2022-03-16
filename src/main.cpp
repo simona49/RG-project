@@ -28,8 +28,8 @@ void processInput(GLFWwindow *window);
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods);
 
 // settings
-const unsigned int SCR_WIDTH = 800;
-const unsigned int SCR_HEIGHT = 600;
+const unsigned int SCR_WIDTH = 1000;
+const unsigned int SCR_HEIGHT = 800;
 
 // camera
 
@@ -52,19 +52,31 @@ struct PointLight {
     float quadratic;
 };
 
+struct DirLight {
+    glm::vec3 direction;
+
+    glm::vec3 ambient;
+    glm::vec3 diffuse;
+    glm::vec3 specular;
+};
+
 struct ProgramState {
-    glm::vec3 clearColor = glm::vec3(0);
-    bool ImGuiEnabled = false;
+    glm::vec3 clearColor = glm::vec3(0.7f,0.0f,0.3f);
+    bool ImGuiEnabled = true;
     Camera camera;
     bool CameraMouseMovementUpdateEnabled = true;
-    glm::vec3 backpackPosition = glm::vec3(0.0f);
-    float backpackScale = 1.0f;
+
+    glm::vec3 backpackPosition = glm::vec3(0.5f);
+    glm::vec3 tablePosition = glm::vec3(-0.6f);
+    float backpackScale = 0.1f;
+    float tableScale = 2.0f;
+
     PointLight pointLight;
+    DirLight dirLight;
     ProgramState()
-            : camera(glm::vec3(0.0f, 0.0f, 4.0f)) {}
+            : camera(glm::vec3(0.0f, 0.0f, 1.0f)) {}
 
     void SaveToFile(std::string filename);
-
     void LoadFromFile(std::string filename);
 };
 
@@ -141,7 +153,7 @@ int main() {
     stbi_set_flip_vertically_on_load(true);
 
     programState = new ProgramState;
-    //programState->LoadFromFile("resources/program_state.txt");
+    programState->LoadFromFile("resources/program_state.txt");
     if (programState->ImGuiEnabled) {
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
     }
@@ -163,11 +175,15 @@ int main() {
     // build and compile shaders
     // -------------------------
     Shader ourShader("resources/shaders/2.model_lighting.vs", "resources/shaders/2.model_lighting.fs");
+    Shader tableShader("resources/shaders/table.vs","resources/shaders/table.fs");
 
     // load models
     // -----------
-    Model ourModel("resources/objects/backpack/backpack.obj");
+    Model ourModel("resources/objects/rock/potted_plant_obj.obj");
     ourModel.SetShaderTextureNamePrefix("material.");
+
+    Model tableModel("resources/objects/table/table.obj");
+    tableModel.SetShaderTextureNamePrefix("material.");
 
     PointLight& pointLight = programState->pointLight;
     pointLight.position = glm::vec3(4.0f, 4.0, 0.0);
@@ -178,6 +194,8 @@ int main() {
     pointLight.constant = 1.0f;
     pointLight.linear = 0.09f;
     pointLight.quadratic = 0.032f;
+
+    DirLight& dirLight = programState->dirLight;
 
 
     auto &initServiceLocator = rg::ServiceLocator::Get();
@@ -220,22 +238,47 @@ int main() {
         ourShader.setFloat("pointLight.constant", pointLight.constant);
         ourShader.setFloat("pointLight.linear", pointLight.linear);
         ourShader.setFloat("pointLight.quadratic", pointLight.quadratic);
+
+        ourShader.setVec3("dirLight.direction", -0.2f, -1.0f, -0.3f);
+        ourShader.setVec3("dirLight.ambient", 0.7f, 0.7f, 0.7f);
+        ourShader.setVec3("dirLight.diffuse", 0.4f, 0.4f, 0.4f);
+        ourShader.setVec3("dirLight.specular", 0.5f, 0.5f, 0.5f);
+
         ourShader.setVec3("viewPosition", programState->camera.Position);
         ourShader.setFloat("material.shininess", 32.0f);
+
+        tableShader.use();
+        tableShader.setVec3("dirLight.direction", -0.2f, -1.0f, -0.3f);
+        tableShader.setVec3("dirLight.ambient", 0.7f, 0.7f, 0.7f);
+        tableShader.setVec3("dirLight.diffuse", 0.4f, 0.4f, 0.4f);
+        tableShader.setVec3("dirLight.specular", 0.5f, 0.5f, 0.5f);
+        tableShader.setVec3("viewPosition", programState->camera.Position);
+        tableShader.setFloat("material.shininess", 32.0f);
+
+
         // view/projection transformations
-        glm::mat4 projection = glm::perspective(glm::radians(programState->camera.Zoom),
-                                                (float) SCR_WIDTH / (float) SCR_HEIGHT, 0.1f, 100.0f);
-        glm::mat4 view = programState->camera.GetViewMatrix();
+
+        glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
         ourShader.setMat4("projection", projection);
+        glm::mat4 view = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+        float radius = 10.0f;
+        float camX   = radius;
+        float camZ   = radius;
+        view = glm::lookAt(glm::vec3(camX, 0.0f, camZ), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
         ourShader.setMat4("view", view);
 
         // render the loaded model
-        glm::mat4 model = glm::mat4(1.0f);
+        glm::mat4 model = glm::mat4(0.7f);
         model = glm::translate(model,
                                programState->backpackPosition); // translate it down so it's at the center of the scene
         model = glm::scale(model, glm::vec3(programState->backpackScale));    // it's a bit too big for our scene, so scale it down
         ourShader.setMat4("model", model);
         ourModel.Draw(ourShader);
+
+        glm::mat4 model2 =  glm::mat4(3.0f);
+        model2 = glm::translate(model2,programState->tablePosition);
+        tableShader.setMat4("model2",model2);
+        tableModel.Draw(tableShader);
 
         if (programState->ImGuiEnabled)
             DrawImGui(programState);

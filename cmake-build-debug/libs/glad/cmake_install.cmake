@@ -1,4 +1,4 @@
-# Install script for directory: /home/simona/project_base/libs/glad
+# Install script for directory: /home/simona/RG-project/libs/glad
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
