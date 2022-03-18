@@ -66,10 +66,13 @@ struct ProgramState {
     Camera camera;
     bool CameraMouseMovementUpdateEnabled = true;
 
-    glm::vec3 backpackPosition = glm::vec3(0.5f);
+    glm::vec3 backpackPosition = glm::vec3(0.5f,0.7f,0.1f);
     glm::vec3 tablePosition = glm::vec3(-0.6f);
+
+    bool Blinn = true;
     float backpackScale = 0.1f;
-    float tableScale = 2.0f;
+    float tableScale = 5.0f;
+    //float plant2Scale = 1.5f;
 
     PointLight pointLight;
     DirLight dirLight;
@@ -86,6 +89,14 @@ void ProgramState::SaveToFile(std::string filename) {
         << clearColor.g << '\n'
         << clearColor.b << '\n'
         << ImGuiEnabled << '\n'
+        << backpackPosition.x << '\n'
+        << backpackPosition.y << '\n'
+        << backpackPosition.z << '\n'
+        << backpackScale << '\n'
+        << tablePosition.x << '\n'
+        << tablePosition.y << '\n'
+        << tablePosition.z << '\n'
+        << tableScale << '\n'
         << camera.Position.x << '\n'
         << camera.Position.y << '\n'
         << camera.Position.z << '\n'
@@ -101,6 +112,14 @@ void ProgramState::LoadFromFile(std::string filename) {
            >> clearColor.g
            >> clearColor.b
            >> ImGuiEnabled
+           >> backpackPosition.x
+           >> backpackPosition.y
+           >> backpackPosition.z
+           >> backpackScale
+           >> tablePosition.x
+           >> tablePosition.y
+           >> tablePosition.z
+           >> tableScale
            >> camera.Position.x
            >> camera.Position.y
            >> camera.Position.z
@@ -176,6 +195,65 @@ int main() {
     // -------------------------
     Shader ourShader("resources/shaders/2.model_lighting.vs", "resources/shaders/2.model_lighting.fs");
     Shader tableShader("resources/shaders/table.vs","resources/shaders/table.fs");
+    Shader cubeShader("resources/shaders/lightCube.vs","resources/shaders/lightCube.fs");
+
+    float vertices[] = {
+            -0.5f, -0.5f, -0.5f,
+            0.5f, -0.5f, -0.5f,
+            0.5f,  0.5f, -0.5f,
+            0.5f,  0.5f, -0.5f,
+            -0.5f,  0.5f, -0.5f,
+            -0.5f, -0.5f, -0.5f,
+
+            -0.5f, -0.5f,  0.5f,
+            0.5f, -0.5f,  0.5f,
+            0.5f,  0.5f,  0.5f,
+            0.5f,  0.5f,  0.5f,
+            -0.5f,  0.5f,  0.5f,
+            -0.5f, -0.5f,  0.5f,
+
+            -0.5f,  0.5f,  0.5f,
+            -0.5f,  0.5f, -0.5f,
+            -0.5f, -0.5f, -0.5f,
+            -0.5f, -0.5f, -0.5f,
+            -0.5f, -0.5f,  0.5f,
+            -0.5f,  0.5f,  0.5f,
+
+            0.5f,  0.5f,  0.5f,
+            0.5f,  0.5f, -0.5f,
+            0.5f, -0.5f, -0.5f,
+            0.5f, -0.5f, -0.5f,
+            0.5f, -0.5f,  0.5f,
+            0.5f,  0.5f,  0.5f,
+
+            -0.5f, -0.5f, -0.5f,
+            0.5f, -0.5f, -0.5f,
+            0.5f, -0.5f,  0.5f,
+            0.5f, -0.5f,  0.5f,
+            -0.5f, -0.5f,  0.5f,
+            -0.5f, -0.5f, -0.5f,
+
+            -0.5f,  0.5f, -0.5f,
+            0.5f,  0.5f, -0.5f,
+            0.5f,  0.5f,  0.5f,
+            0.5f,  0.5f,  0.5f,
+            -0.5f,  0.5f,  0.5f,
+            -0.5f,  0.5f, -0.5f
+    };
+
+    unsigned int VBO, VAO;
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+
+    glBindVertexArray(VAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    // position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    // texture coord attribute
 
     // load models
     // -----------
@@ -185,13 +263,14 @@ int main() {
     Model tableModel("resources/objects/table/table.obj");
     tableModel.SetShaderTextureNamePrefix("material.");
 
+
     PointLight& pointLight = programState->pointLight;
-    pointLight.position = glm::vec3(4.0f, 4.0, 0.0);
+    pointLight.position =  glm::vec3(4.0f, 4.0, 0.0);
     pointLight.ambient = glm::vec3(0.1, 0.1, 0.1);
-    pointLight.diffuse = glm::vec3(0.6, 0.6, 0.6);
+    pointLight.diffuse = glm::vec3(0.8, 0.8, 0.8);
     pointLight.specular = glm::vec3(1.0, 1.0, 1.0);
 
-    pointLight.constant = 1.0f;
+    pointLight.constant = 0.5f;
     pointLight.linear = 0.09f;
     pointLight.quadratic = 0.032f;
 
@@ -228,7 +307,9 @@ int main() {
         glClearColor(programState->clearColor.r, programState->clearColor.g, programState->clearColor.b, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+
         // don't forget to enable shader before setting uniforms
+
         ourShader.use();
         pointLight.position = glm::vec3(4.0 * cos(currentFrame), 4.0f, 4.0 * sin(currentFrame));
         ourShader.setVec3("pointLight.position", pointLight.position);
@@ -240,32 +321,53 @@ int main() {
         ourShader.setFloat("pointLight.quadratic", pointLight.quadratic);
 
         ourShader.setVec3("dirLight.direction", -0.2f, -1.0f, -0.3f);
-        ourShader.setVec3("dirLight.ambient", 0.7f, 0.7f, 0.7f);
-        ourShader.setVec3("dirLight.diffuse", 0.4f, 0.4f, 0.4f);
-        ourShader.setVec3("dirLight.specular", 0.5f, 0.5f, 0.5f);
+        ourShader.setVec3("dirLight.ambient", 0.2f, 0.2f, 0.2f);
+        ourShader.setVec3("dirLight.diffuse", 0.2f, 0.2f, 0.2f);
+        ourShader.setVec3("dirLight.specular", 0.3f, 0.3f, 0.3f);
 
         ourShader.setVec3("viewPosition", programState->camera.Position);
         ourShader.setFloat("material.shininess", 32.0f);
+        ourShader.setBool("Blinn",programState->Blinn);
 
         tableShader.use();
         tableShader.setVec3("dirLight.direction", -0.2f, -1.0f, -0.3f);
-        tableShader.setVec3("dirLight.ambient", 0.7f, 0.7f, 0.7f);
-        tableShader.setVec3("dirLight.diffuse", 0.4f, 0.4f, 0.4f);
-        tableShader.setVec3("dirLight.specular", 0.5f, 0.5f, 0.5f);
+        tableShader.setVec3("dirLight.ambient", 0.2f, 0.2f, 0.2f);
+        tableShader.setVec3("dirLight.diffuse", 0.2f, 0.2f, 0.2f);
+        tableShader.setVec3("dirLight.specular", 0.3f, 0.3f, 0.3f);
         tableShader.setVec3("viewPosition", programState->camera.Position);
         tableShader.setFloat("material.shininess", 32.0f);
+        tableShader.setBool("Blinn",programState->Blinn);
 
+        tableShader.setVec3("pointLight.position", pointLight.position);
+        tableShader.setVec3("pointLight.ambient", pointLight.ambient);
+        tableShader.setVec3("pointLight.diffuse", pointLight.diffuse);
+        tableShader.setVec3("pointLight.specular", pointLight.specular);
+        tableShader.setFloat("pointLight.constant", pointLight.constant);
+        tableShader.setFloat("pointLight.linear", pointLight.linear);
+        tableShader.setFloat("pointLight.quadratic", pointLight.quadratic);
 
         // view/projection transformations
 
-        glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+        glm::mat4 projection = glm::perspective(glm::radians(60.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
         ourShader.setMat4("projection", projection);
         glm::mat4 view = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
         float radius = 10.0f;
-        float camX   = radius;
+        float camX   =  radius; //sin(glfwGetTime())
         float camZ   = radius;
         view = glm::lookAt(glm::vec3(camX, 0.0f, camZ), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
         ourShader.setMat4("view", view);
+
+        glBindVertexArray(VAO);
+
+        glm::mat4 model3 = glm::mat4(1.0f);
+        model3 = glm::translate(model3, pointLight.position);
+        model3 = glm::scale(model3,glm::vec3(0.3f));
+        cubeShader.setMat4("model3", model3);
+        cubeShader.setMat4("view",view);
+        cubeShader.setMat4("projection",projection);
+
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+
 
         // render the loaded model
         glm::mat4 model = glm::mat4(0.7f);
@@ -277,13 +379,13 @@ int main() {
 
         glm::mat4 model2 =  glm::mat4(3.0f);
         model2 = glm::translate(model2,programState->tablePosition);
+        model2 = glm::scale(model2,glm::vec3(programState->tableScale));
         tableShader.setMat4("model2",model2);
         tableModel.Draw(tableShader);
 
+
         if (programState->ImGuiEnabled)
             DrawImGui(programState);
-
-
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
@@ -362,8 +464,11 @@ void DrawImGui(ProgramState *programState) {
         ImGui::Text("Hello text");
         ImGui::SliderFloat("Float slider", &f, 0.0, 1.0);
         ImGui::ColorEdit3("Background color", (float *) &programState->clearColor);
-        ImGui::DragFloat3("Backpack position", (float*)&programState->backpackPosition);
-        ImGui::DragFloat("Backpack scale", &programState->backpackScale, 0.05, 0.1, 4.0);
+        ImGui::InputFloat3("Backpack position", (float*)&programState->backpackPosition,0);
+        ImGui::InputFloat("Backpack scale", &programState->backpackScale,0.03f,0.2f);
+
+        ImGui::InputFloat3("Table position",(float *)&programState->tablePosition,0);
+        ImGui::InputFloat("Table scale",(float*)&programState->tableScale,0.03f,0.2);
 
         ImGui::DragFloat("pointLight.constant", &programState->pointLight.constant, 0.05, 0.0, 1.0);
         ImGui::DragFloat("pointLight.linear", &programState->pointLight.linear, 0.05, 0.0, 1.0);
