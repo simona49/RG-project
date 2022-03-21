@@ -27,6 +27,8 @@ void processInput(GLFWwindow *window);
 
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods);
 
+unsigned int loadTexture(char const * path);
+
 // settings
 const unsigned int SCR_WIDTH = 1000;
 const unsigned int SCR_HEIGHT = 800;
@@ -66,13 +68,12 @@ struct ProgramState {
     Camera camera;
     bool CameraMouseMovementUpdateEnabled = true;
 
-    glm::vec3 backpackPosition = glm::vec3(0.5f,0.7f,0.1f);
+    glm::vec3 plantPosition = glm::vec3(0.5f,0.7f,0.1f);
     glm::vec3 tablePosition = glm::vec3(-0.6f);
 
     bool Blinn = true;
-    float backpackScale = 0.1f;
+    float plantScale = 0.1f;
     float tableScale = 5.0f;
-    //float plant2Scale = 1.5f;
 
     PointLight pointLight;
     DirLight dirLight;
@@ -89,10 +90,10 @@ void ProgramState::SaveToFile(std::string filename) {
         << clearColor.g << '\n'
         << clearColor.b << '\n'
         << ImGuiEnabled << '\n'
-        << backpackPosition.x << '\n'
-        << backpackPosition.y << '\n'
-        << backpackPosition.z << '\n'
-        << backpackScale << '\n'
+        << plantPosition.x << '\n'
+        << plantPosition.y << '\n'
+        << plantPosition.z << '\n'
+        << plantScale << '\n'
         << tablePosition.x << '\n'
         << tablePosition.y << '\n'
         << tablePosition.z << '\n'
@@ -112,10 +113,10 @@ void ProgramState::LoadFromFile(std::string filename) {
            >> clearColor.g
            >> clearColor.b
            >> ImGuiEnabled
-           >> backpackPosition.x
-           >> backpackPosition.y
-           >> backpackPosition.z
-           >> backpackScale
+           >> plantPosition.x
+           >> plantPosition.y
+           >> plantPosition.z
+           >> plantScale
            >> tablePosition.x
            >> tablePosition.y
            >> tablePosition.z
@@ -196,43 +197,44 @@ int main() {
     Shader ourShader("resources/shaders/2.model_lighting.vs", "resources/shaders/2.model_lighting.fs");
     Shader tableShader("resources/shaders/table.vs","resources/shaders/table.fs");
     Shader cubeShader("resources/shaders/lightCube.vs","resources/shaders/lightCube.fs");
+    Shader shader("resources/shaders/blending.vs","resources/shaders/blending.fs");
 
-    float vertices[] = {
+    float cubeVertices[] = {
             -0.5f, -0.5f, -0.5f,
             0.5f, -0.5f, -0.5f,
             0.5f,  0.5f, -0.5f,
             0.5f,  0.5f, -0.5f,
             -0.5f,  0.5f, -0.5f,
             -0.5f, -0.5f, -0.5f,
-
+            // front face
             -0.5f, -0.5f,  0.5f,
+            0.5f,  0.5f,  0.5f,
             0.5f, -0.5f,  0.5f,
             0.5f,  0.5f,  0.5f,
-            0.5f,  0.5f,  0.5f,
-            -0.5f,  0.5f,  0.5f,
             -0.5f, -0.5f,  0.5f,
-
             -0.5f,  0.5f,  0.5f,
+            // left face
+            -0.5f,  0.5f,  0.5f,
+            -0.5f, -0.5f, -0.5f,
             -0.5f,  0.5f, -0.5f,
             -0.5f, -0.5f, -0.5f,
-            -0.5f, -0.5f, -0.5f,
-            -0.5f, -0.5f,  0.5f,
             -0.5f,  0.5f,  0.5f,
-
+            -0.5f, -0.5f,  0.5f,
+            // right face
             0.5f,  0.5f,  0.5f,
             0.5f,  0.5f, -0.5f,
             0.5f, -0.5f, -0.5f,
             0.5f, -0.5f, -0.5f,
             0.5f, -0.5f,  0.5f,
             0.5f,  0.5f,  0.5f,
-
+            // bottom face
             -0.5f, -0.5f, -0.5f,
+            0.5f, -0.5f,  0.5f,
             0.5f, -0.5f, -0.5f,
             0.5f, -0.5f,  0.5f,
-            0.5f, -0.5f,  0.5f,
-            -0.5f, -0.5f,  0.5f,
             -0.5f, -0.5f, -0.5f,
-
+            -0.5f, -0.5f,  0.5f,
+            // top face
             -0.5f,  0.5f, -0.5f,
             0.5f,  0.5f, -0.5f,
             0.5f,  0.5f,  0.5f,
@@ -241,19 +243,50 @@ int main() {
             -0.5f,  0.5f, -0.5f
     };
 
-    unsigned int VBO, VAO;
+    float transparentVertices[] = {
+            // positions         // texture Coords (swapped y coordinates because texture is flipped upside down)
+            0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
+            0.0f, -0.5f,  0.0f,  0.0f,  1.0f,
+            1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
+
+            0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
+            1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
+            1.0f,  0.5f,  0.0f,  1.0f,  0.0f
+    };
+
+    //light cube
+    unsigned int VAO,VBO;
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
-
     glBindVertexArray(VAO);
-
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-    // position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), &cubeVertices, GL_STATIC_DRAW);
     glEnableVertexAttribArray(0);
-    // texture coord attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+
+    // transparent VAO
+    unsigned int transparentVAO, transparentVBO;
+    glGenVertexArrays(1, &transparentVAO);
+    glGenBuffers(1, &transparentVBO);
+    glBindVertexArray(transparentVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, transparentVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(transparentVertices), transparentVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glBindVertexArray(0);
+
+    vector<glm::vec3> vegetation
+            {
+                    glm::vec3(-1.5f, -1.6f, -0.48f),
+                    glm::vec3( 1.5f, -1.6f, 0.51f),
+                    glm::vec3( 0.0f, -1.6f, 0.7f),
+                    glm::vec3(-0.3f, -1.6f, -2.3f),
+                    glm::vec3(0.5f, -1.6f, -0.6f)
+            };
+
+    unsigned int transparentTexture = loadTexture("resources/textures/grass.png");
 
     // load models
     // -----------
@@ -275,6 +308,11 @@ int main() {
     pointLight.quadratic = 0.032f;
 
     DirLight& dirLight = programState->dirLight;
+
+    dirLight.direction = glm::vec3(-0.2f, -1.0f, -0.3f);
+    dirLight.ambient = glm::vec3(0.2f, 0.2f, 0.2f);
+    dirLight.diffuse = glm::vec3(0.2f, 0.2f, 0.2f);
+    dirLight.specular = glm::vec3(0.3f, 0.3f, 0.3f);
 
 
     auto &initServiceLocator = rg::ServiceLocator::Get();
@@ -320,20 +358,20 @@ int main() {
         ourShader.setFloat("pointLight.linear", pointLight.linear);
         ourShader.setFloat("pointLight.quadratic", pointLight.quadratic);
 
-        ourShader.setVec3("dirLight.direction", -0.2f, -1.0f, -0.3f);
-        ourShader.setVec3("dirLight.ambient", 0.2f, 0.2f, 0.2f);
-        ourShader.setVec3("dirLight.diffuse", 0.2f, 0.2f, 0.2f);
-        ourShader.setVec3("dirLight.specular", 0.3f, 0.3f, 0.3f);
+        ourShader.setVec3("dirLight.direction", dirLight.direction);
+        ourShader.setVec3("dirLight.ambient", dirLight.ambient);
+        ourShader.setVec3("dirLight.diffuse", dirLight.diffuse);
+        ourShader.setVec3("dirLight.specular", dirLight.specular);
 
         ourShader.setVec3("viewPosition", programState->camera.Position);
         ourShader.setFloat("material.shininess", 32.0f);
         ourShader.setBool("Blinn",programState->Blinn);
 
         tableShader.use();
-        tableShader.setVec3("dirLight.direction", -0.2f, -1.0f, -0.3f);
-        tableShader.setVec3("dirLight.ambient", 0.2f, 0.2f, 0.2f);
-        tableShader.setVec3("dirLight.diffuse", 0.2f, 0.2f, 0.2f);
-        tableShader.setVec3("dirLight.specular", 0.3f, 0.3f, 0.3f);
+        tableShader.setVec3("dirLight.ambient",dirLight.ambient);
+        tableShader.setVec3("dirLight.direction", dirLight.direction);
+        tableShader.setVec3("dirLight.diffuse", dirLight.diffuse);
+        tableShader.setVec3("dirLight.specular", dirLight.specular);
         tableShader.setVec3("viewPosition", programState->camera.Position);
         tableShader.setFloat("material.shininess", 32.0f);
         tableShader.setBool("Blinn",programState->Blinn);
@@ -352,8 +390,8 @@ int main() {
         ourShader.setMat4("projection", projection);
         glm::mat4 view = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
         float radius = 10.0f;
-        float camX   =  radius; //sin(glfwGetTime())
-        float camZ   = radius;
+        float camX   = sin(glfwGetTime()) * radius; //sin(glfwGetTime())
+        float camZ   = cos(glfwGetTime()) * radius;
         view = glm::lookAt(glm::vec3(camX, 0.0f, camZ), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
         ourShader.setMat4("view", view);
 
@@ -366,14 +404,15 @@ int main() {
         cubeShader.setMat4("view",view);
         cubeShader.setMat4("projection",projection);
 
+        glEnable(GL_CULL_FACE);
         glDrawArrays(GL_TRIANGLES, 0, 36);
-
+        glDisable(GL_CULL_FACE);
 
         // render the loaded model
         glm::mat4 model = glm::mat4(0.7f);
         model = glm::translate(model,
-                               programState->backpackPosition); // translate it down so it's at the center of the scene
-        model = glm::scale(model, glm::vec3(programState->backpackScale));    // it's a bit too big for our scene, so scale it down
+                               programState->plantPosition); // translate it down so it's at the center of the scene
+        model = glm::scale(model, glm::vec3(programState->plantScale));    // it's a bit too big for our scene, so scale it down
         ourShader.setMat4("model", model);
         ourModel.Draw(ourShader);
 
@@ -382,6 +421,24 @@ int main() {
         model2 = glm::scale(model2,glm::vec3(programState->tableScale));
         tableShader.setMat4("model2",model2);
         tableModel.Draw(tableShader);
+
+        //texture objects
+
+        shader.use();
+        model = glm::mat4(1.0f);
+        shader.setMat4("projection", projection);
+        shader.setMat4("view", view);
+
+        // vegetation
+        glBindVertexArray(transparentVAO);
+        glBindTexture(GL_TEXTURE_2D, transparentTexture);
+        for (unsigned int i = 0; i < vegetation.size(); i++)
+        {
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, vegetation[i]);
+            shader.setMat4("model", model);
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+        }
 
 
         if (programState->ImGuiEnabled)
@@ -400,6 +457,11 @@ int main() {
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
+
+    glDeleteVertexArrays(1,&VAO);
+    glDeleteVertexArrays(1,&transparentVAO);
+    glDeleteBuffers(1,&VBO);
+    glDeleteBuffers(1,&transparentVBO);
     // glfw: terminate, clearing all previously allocated GLFW resources.
     // ------------------------------------------------------------------
     glfwTerminate();
@@ -464,8 +526,8 @@ void DrawImGui(ProgramState *programState) {
         ImGui::Text("Hello text");
         ImGui::SliderFloat("Float slider", &f, 0.0, 1.0);
         ImGui::ColorEdit3("Background color", (float *) &programState->clearColor);
-        ImGui::InputFloat3("Backpack position", (float*)&programState->backpackPosition,0);
-        ImGui::InputFloat("Backpack scale", &programState->backpackScale,0.03f,0.2f);
+        ImGui::InputFloat3("Plant position", (float*)&programState->plantPosition,0);
+        ImGui::InputFloat("Plant scale", &programState->plantScale,0.03f,0.2f);
 
         ImGui::InputFloat3("Table position",(float *)&programState->tablePosition,0);
         ImGui::InputFloat("Table scale",(float*)&programState->tableScale,0.03f,0.2);
@@ -505,3 +567,41 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
     rg::ServiceLocator::Get().getInputController().processKeyCallback(window, key, action);
 #endif
 }
+
+unsigned int loadTexture(char const * path)
+{
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+
+    int width, height, nrComponents;
+    unsigned char *data = stbi_load(path, &width, &height, &nrComponents, 0);
+    if (data)
+    {
+        GLenum format = GL_RGBA;
+        //if (nrComponents == 1)
+          //  format = GL_RED;
+        //else if (nrComponents == 3)
+          //  format = GL_RGB;
+        //else if (nrComponents == 4)
+          //  format = GL_RGBA;
+
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT); // for this tutorial: use GL_CLAMP_TO_EDGE to prevent semi-transparent borders. Due to interpolation it takes texels from next repeat
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        stbi_image_free(data);
+    }
+    else
+    {
+        std::cout << "Texture failed to load at path: " << path << std::endl;
+        stbi_image_free(data);
+    }
+
+    return textureID;
+}
+
