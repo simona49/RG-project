@@ -29,6 +29,8 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
 
 unsigned int loadTexture(char const * path);
 
+unsigned int loadCubemap(vector<std::string> faces);
+
 // settings
 const unsigned int SCR_WIDTH = 1000;
 const unsigned int SCR_HEIGHT = 800;
@@ -70,6 +72,7 @@ struct ProgramState {
 
     glm::vec3 plantPosition = glm::vec3(0.5f,0.7f,0.1f);
     glm::vec3 tablePosition = glm::vec3(-0.6f);
+    glm::vec3 planePosition = glm::vec3(0.5f,0.5f,0.5f);
 
     bool Blinn = true;
     float plantScale = 0.1f;
@@ -98,6 +101,9 @@ void ProgramState::SaveToFile(std::string filename) {
         << tablePosition.y << '\n'
         << tablePosition.z << '\n'
         << tableScale << '\n'
+        << planePosition.x << '\n'
+        << planePosition.y << '\n'
+        << planePosition.z << '\n'
         << camera.Position.x << '\n'
         << camera.Position.y << '\n'
         << camera.Position.z << '\n'
@@ -121,6 +127,9 @@ void ProgramState::LoadFromFile(std::string filename) {
            >> tablePosition.y
            >> tablePosition.z
            >> tableScale
+           >> planePosition.x
+           >> planePosition.y
+           >> planePosition.z
            >> camera.Position.x
            >> camera.Position.y
            >> camera.Position.z
@@ -141,6 +150,7 @@ int main() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    //glfwWindowHint(GLFW_SAMPLES, 4);
 
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
@@ -198,6 +208,8 @@ int main() {
     Shader tableShader("resources/shaders/table.vs","resources/shaders/table.fs");
     Shader cubeShader("resources/shaders/lightCube.vs","resources/shaders/lightCube.fs");
     Shader shader("resources/shaders/blending.vs","resources/shaders/blending.fs");
+    Shader screenShader("resources/shaders/screen.vs","resources/shaders/screen.fs");
+    Shader planeShader("resources/shaders/plane.vs","resources/shaders/plane.fs");
 
     float cubeVertices[] = {
             -0.5f, -0.5f, -0.5f,
@@ -254,6 +266,40 @@ int main() {
             1.0f,  0.5f,  0.0f,  1.0f,  0.0f
     };
 
+    float quadVertices[] = {   // vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
+            // positions   // texCoords
+            -1.0f,  1.0f,  0.0f, 1.0f,
+            -1.0f, -1.0f,  0.0f, 0.0f,
+            1.0f, -1.0f,  1.0f, 0.0f,
+
+            -1.0f,  1.0f,  0.0f, 1.0f,
+            1.0f, -1.0f,  1.0f, 0.0f,
+            1.0f,  1.0f,  1.0f, 1.0f
+    };
+
+    float planeVertices[] = {
+            // positions          // texture Coords
+            3.0f, -0.5f,  3.0f,  2.0f, 0.0f,
+            -3.0f, -0.5f,  3.0f,  0.0f, 0.0f,
+            -3.0f, -0.5f, -3.0f,  0.0f, 2.0f,
+
+            3.0f, -0.5f,  3.0f,  2.0f, 0.0f,
+            -3.0f, -0.5f, -3.0f,  0.0f, 2.0f,
+            3.0f, -0.5f, -3.0f,  2.0f, 2.0f
+    };
+
+    //plane
+    unsigned int planeVAO, planeVBO;
+    glGenVertexArrays(1, &planeVAO);
+    glGenBuffers(1, &planeVBO);
+    glBindVertexArray(planeVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, planeVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(planeVertices), &planeVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+
     //light cube
     unsigned int VAO,VBO;
     glGenVertexArrays(1, &VAO);
@@ -287,6 +333,67 @@ int main() {
             };
 
     unsigned int transparentTexture = loadTexture("resources/textures/grass.png");
+    unsigned int planeTexture = loadTexture("resources/textures/1.jpg");
+
+    shader.use();
+    shader.setInt("texture1",0);
+    planeShader.use();
+    planeShader.setInt("texture1",0);
+
+    // setup screen VAO
+    unsigned int quadVAO, quadVBO;
+    glGenVertexArrays(1, &quadVAO);
+    glGenBuffers(1, &quadVBO);
+    glBindVertexArray(quadVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+
+    //MSAA framebuffer
+    unsigned int framebuffer;
+    glGenFramebuffers(1, &framebuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+    // create a multisampled color attachment texture
+    unsigned int textureColorBufferMultiSampled;
+    glGenTextures(1, &textureColorBufferMultiSampled);
+    glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, textureColorBufferMultiSampled);
+    glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, 4, GL_RGB, SCR_WIDTH, SCR_HEIGHT, GL_TRUE);
+    glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, textureColorBufferMultiSampled, 0);
+    // create a (also multisampled) renderbuffer object for depth and stencil attachments
+    unsigned int rbo;
+    glGenRenderbuffers(1, &rbo);
+    glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+    glRenderbufferStorageMultisample(GL_RENDERBUFFER, 4, GL_DEPTH24_STENCIL8, SCR_WIDTH, SCR_HEIGHT);
+    glBindRenderbuffer(GL_RENDERBUFFER, 0);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
+
+    //check if framebuffer is completed
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << endl;
+    //deactivate framebuffer
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    // configure second post-processing framebuffer
+    unsigned int intermediateFBO;
+    glGenFramebuffers(1, &intermediateFBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, intermediateFBO);
+    // create a color attachment texture
+    unsigned int screenTexture;
+    glGenTextures(1, &screenTexture);
+    glBindTexture(GL_TEXTURE_2D, screenTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, screenTexture, 0);	// we only need a color buffer
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        cout << "ERROR::FRAMEBUFFER:: Intermediate framebuffer is not complete!" << endl;
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
 
     // load models
     // -----------
@@ -345,7 +452,10 @@ int main() {
         glClearColor(programState->clearColor.r, programState->clearColor.g, programState->clearColor.b, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-
+        glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+        glClearColor(programState->clearColor.r, programState->clearColor.g, programState->clearColor.b, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glEnable(GL_DEPTH_TEST);
         // don't forget to enable shader before setting uniforms
 
         ourShader.use();
@@ -386,13 +496,13 @@ int main() {
 
         // view/projection transformations
 
-        glm::mat4 projection = glm::perspective(glm::radians(60.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+        glm::mat4 projection = glm::perspective(glm::radians(80.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
         ourShader.setMat4("projection", projection);
         glm::mat4 view = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
         float radius = 10.0f;
         float camX   = sin(glfwGetTime()) * radius; //sin(glfwGetTime())
-        float camZ   = cos(glfwGetTime()) * radius;
-        view = glm::lookAt(glm::vec3(camX, 0.0f, camZ), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        float camZ   = cos(glfwGetTime())* radius;
+        view = glm::lookAt(glm::vec3(camX, 0.0f, camZ), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 4.0f, 0.0f));
         ourShader.setMat4("view", view);
 
         glBindVertexArray(VAO);
@@ -424,12 +534,24 @@ int main() {
 
         //texture objects
 
+        //plane
+        planeShader.use();
+        planeShader.setMat4("projection",projection);
+        planeShader.setMat4("view",view);
+        glBindVertexArray(planeVAO);
+        glBindTexture(GL_TEXTURE_2D, planeTexture);
+        model = glm::mat4(1.0f);
+        model = glm::translate(model,programState->planePosition);
+        model = glm::scale(model,glm::vec3(3.0f));
+        planeShader.setMat4("model", model);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+
+        // vegetation
         shader.use();
         model = glm::mat4(1.0f);
         shader.setMat4("projection", projection);
         shader.setMat4("view", view);
 
-        // vegetation
         glBindVertexArray(transparentVAO);
         glBindTexture(GL_TEXTURE_2D, transparentTexture);
         for (unsigned int i = 0; i < vegetation.size(); i++)
@@ -439,6 +561,26 @@ int main() {
             shader.setMat4("model", model);
             glDrawArrays(GL_TRIANGLES, 0, 6);
         }
+
+
+        // 2. now blit multisampled buffer(s) to normal colorbuffer of intermediate FBO. Image is stored in screenTexture
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, framebuffer);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, intermediateFBO);
+        glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT, 0, 0, SCR_WIDTH, SCR_HEIGHT, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
+        // 3. now render quad with scene's visuals as its texture image
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glDisable(GL_DEPTH_TEST);
+
+        // draw Screen quad
+        screenShader.use();
+        glBindVertexArray(quadVAO);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, screenTexture); // use the now resolved color attachment as the quad's texture
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+
 
 
         if (programState->ImGuiEnabled)
@@ -532,6 +674,8 @@ void DrawImGui(ProgramState *programState) {
         ImGui::InputFloat3("Table position",(float *)&programState->tablePosition,0);
         ImGui::InputFloat("Table scale",(float*)&programState->tableScale,0.03f,0.2);
 
+        ImGui::InputFloat3("Plane position",(float *)&programState->planePosition,0);
+
         ImGui::DragFloat("pointLight.constant", &programState->pointLight.constant, 0.05, 0.0, 1.0);
         ImGui::DragFloat("pointLight.linear", &programState->pointLight.linear, 0.05, 0.0, 1.0);
         ImGui::DragFloat("pointLight.quadratic", &programState->pointLight.quadratic, 0.05, 0.0, 1.0);
@@ -578,12 +722,12 @@ unsigned int loadTexture(char const * path)
     if (data)
     {
         GLenum format = GL_RGBA;
-        //if (nrComponents == 1)
-          //  format = GL_RED;
-        //else if (nrComponents == 3)
-          //  format = GL_RGB;
-        //else if (nrComponents == 4)
-          //  format = GL_RGBA;
+        if (nrComponents == 1)
+            format = GL_RED;
+        else if (nrComponents == 3)
+            format = GL_RGB;
+        else if (nrComponents == 4)
+            format = GL_RGBA;
 
         glBindTexture(GL_TEXTURE_2D, textureID);
         glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
