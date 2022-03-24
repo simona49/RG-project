@@ -32,16 +32,17 @@ class Camera : public rg::Observer {
 
 public:
     float Zoom = 45.f;
-    float MovementSpeed = 2.5f;
+    float MovementSpeed = 10.0f;
     float Yaw = -90.0f;
     float Pitch = 0.0f;
     float MouseSensitivity = 0.1f;
 
-    glm::vec3 Position = glm::vec3(2,2,10);
+    glm::vec3 Position = glm::vec3(2,10,10);
     glm::vec3 WorldUp = glm::vec3(0, 1, 0);
     glm::vec3 Up = glm::vec3(0, 1, 0);
-    glm::vec3 Right;
+    glm::vec3 Right = glm::vec3(0,0,0);
     glm::vec3 Front = glm::vec3(0, 0, -4);
+    glm::vec3 Left = glm::vec3(0,0,0);
 
     Camera() {
         updateCameraVectors();
@@ -108,6 +109,7 @@ public:
     }
 
     void update(float dt) {
+        updateCameraVectors();
         for (rg::Event& event : m_events) {
             if (event.eventType == rg::EventType::MouseMoved) {
                 ProcessMouseMovement(event.mouseMoved.xoffset, event.mouseMoved.yoffset);

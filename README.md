@@ -3,15 +3,23 @@
 Project contains:
 
 - ADVANCED LIGHTNING: directional,point(Blinn-Phong)
-- MODELS: table,poted plant
 - FACE CULLING
 - BLENDING(discard)
-- texture(grass.png) from OpenGL repository
+- topics from 1. to 8. week
 
-Group A:
+**Group A:**
 - ANTI ALIASING(offscreen)
 
-Group B:
+**Group B:**
+- NORMAL MAPPING
+
+##Controls
+
+- WASD -> change camera position
+- 1 -> turn on/off Blinn-Phong
+- 2 -> turn on/off point light
+- 3 -> turn on/off gray scale
+
 
 
 

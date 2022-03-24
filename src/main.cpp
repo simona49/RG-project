@@ -29,7 +29,7 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
 
 unsigned int loadTexture(char const * path);
 
-unsigned int loadCubemap(vector<std::string> faces);
+void renderQuad();
 
 // settings
 const unsigned int SCR_WIDTH = 1000;
@@ -74,7 +74,11 @@ struct ProgramState {
     glm::vec3 tablePosition = glm::vec3(-0.6f);
     glm::vec3 planePosition = glm::vec3(0.5f,0.5f,0.5f);
 
+    //indicators
     bool Blinn = true;
+    bool pointLightInd = true;
+    bool grayScaleInd = false;
+
     float plantScale = 0.1f;
     float tableScale = 5.0f;
 
@@ -169,6 +173,7 @@ int main() {
     glfwSetCursorPosCallback(window, mouse_callback);
     glfwSetScrollCallback(window, scroll_callback);
     glfwSetKeyCallback(window, key_callback);
+
     // tell GLFW to capture our mouse
 //    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
@@ -209,7 +214,7 @@ int main() {
     Shader cubeShader("resources/shaders/lightCube.vs","resources/shaders/lightCube.fs");
     Shader shader("resources/shaders/blending.vs","resources/shaders/blending.fs");
     Shader screenShader("resources/shaders/screen.vs","resources/shaders/screen.fs");
-    Shader planeShader("resources/shaders/plane.vs","resources/shaders/plane.fs");
+    Shader planeShader("resources/shaders/plane.vs","resources/shaders/plane.fs"); //normal mapping
 
     float cubeVertices[] = {
             -0.5f, -0.5f, -0.5f,
@@ -277,29 +282,6 @@ int main() {
             1.0f,  1.0f,  1.0f, 1.0f
     };
 
-    float planeVertices[] = {
-            // positions          // texture Coords
-            3.0f, -0.5f,  3.0f,  2.0f, 0.0f,
-            -3.0f, -0.5f,  3.0f,  0.0f, 0.0f,
-            -3.0f, -0.5f, -3.0f,  0.0f, 2.0f,
-
-            3.0f, -0.5f,  3.0f,  2.0f, 0.0f,
-            -3.0f, -0.5f, -3.0f,  0.0f, 2.0f,
-            3.0f, -0.5f, -3.0f,  2.0f, 2.0f
-    };
-
-    //plane
-    unsigned int planeVAO, planeVBO;
-    glGenVertexArrays(1, &planeVAO);
-    glGenBuffers(1, &planeVBO);
-    glBindVertexArray(planeVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, planeVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(planeVertices), &planeVertices, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-
     //light cube
     unsigned int VAO,VBO;
     glGenVertexArrays(1, &VAO);
@@ -327,18 +309,43 @@ int main() {
             {
                     glm::vec3(-1.5f, -1.6f, -0.48f),
                     glm::vec3( 1.5f, -1.6f, 0.51f),
-                    glm::vec3( 0.0f, -1.6f, 0.7f),
+                    glm::vec3( -3.0f, -1.6f, 0.7f),
                     glm::vec3(-0.3f, -1.6f, -2.3f),
-                    glm::vec3(0.5f, -1.6f, -0.6f)
+                    glm::vec3(5.5f, -1.6f, -0.6f),
+                    glm::vec3(2.0f,-1.6f,2.9f),
+                    glm::vec3(2.5f,-1.6f,-2.0f),
+                    glm::vec3(2.5f,-1.6f,-6.0f),
+                    glm::vec3(0.0f,-1.6f,-6.0f),
+                    glm::vec3(-2.5f,-1.6f,-6.0f),
+                    glm::vec3(-5.0f,-1.6f,-7.0f),
+                    glm::vec3(-8.0f,-1.6f,-8.0f),
+                    glm::vec3(-7.5f,-1.6f,-4.0f),
+                    glm::vec3(-5.0f,-1.6f,-2.0f),
+                    glm::vec3(-8.5f,-1.6f,0.0f),
+                    glm::vec3(-6.0f,-1.6f,2.0f),
+                    glm::vec3(-4.5f,-1.6f,5.0f),
+                    glm::vec3(-8.5f,-1.6f,3.0f),
+                    glm::vec3(-2.5f,-1.6f,3.0f),
+                    glm::vec3(0.0f,-1.6f,5.0f),
+                    glm::vec3(0.0f,-1.6f,2.5f),
+                    glm::vec3(6.0f,-1.6f,5.5f),
+                    glm::vec3(4.5f,-1.6f,4.0f),
+                    glm::vec3(3.5f,-1.6f,2.0f),
+                    glm::vec3(4.5f,-1.6f,-3.0f),
+                    glm::vec3(5.5f,-1.6f,-6.0f),
             };
 
+    //loading textures
     unsigned int transparentTexture = loadTexture("resources/textures/grass.png");
-    unsigned int planeTexture = loadTexture("resources/textures/1.jpg");
+
+    unsigned int diffuseMap = loadTexture("resources/textures/ground.jpg");
+    unsigned int normalMap = loadTexture("resources/textures/ground_normal.jpg");
 
     shader.use();
     shader.setInt("texture1",0);
     planeShader.use();
-    planeShader.setInt("texture1",0);
+    planeShader.setInt("diffuseMap",0);
+    planeShader.setInt("normalMap",1);
 
     // setup screen VAO
     unsigned int quadVAO, quadVBO;
@@ -356,14 +363,14 @@ int main() {
     unsigned int framebuffer;
     glGenFramebuffers(1, &framebuffer);
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-    // create a multisampled color attachment texture
+
     unsigned int textureColorBufferMultiSampled;
     glGenTextures(1, &textureColorBufferMultiSampled);
     glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, textureColorBufferMultiSampled);
     glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, 4, GL_RGB, SCR_WIDTH, SCR_HEIGHT, GL_TRUE);
     glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, 0);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, textureColorBufferMultiSampled, 0);
-    // create a (also multisampled) renderbuffer object for depth and stencil attachments
+
     unsigned int rbo;
     glGenRenderbuffers(1, &rbo);
     glBindRenderbuffer(GL_RENDERBUFFER, rbo);
@@ -381,7 +388,7 @@ int main() {
     unsigned int intermediateFBO;
     glGenFramebuffers(1, &intermediateFBO);
     glBindFramebuffer(GL_FRAMEBUFFER, intermediateFBO);
-    // create a color attachment texture
+
     unsigned int screenTexture;
     glGenTextures(1, &screenTexture);
     glBindTexture(GL_TEXTURE_2D, screenTexture);
@@ -405,7 +412,6 @@ int main() {
 
 
     PointLight& pointLight = programState->pointLight;
-    pointLight.position =  glm::vec3(4.0f, 4.0, 0.0);
     pointLight.ambient = glm::vec3(0.1, 0.1, 0.1);
     pointLight.diffuse = glm::vec3(0.8, 0.8, 0.8);
     pointLight.specular = glm::vec3(1.0, 1.0, 1.0);
@@ -417,7 +423,7 @@ int main() {
     DirLight& dirLight = programState->dirLight;
 
     dirLight.direction = glm::vec3(-0.2f, -1.0f, -0.3f);
-    dirLight.ambient = glm::vec3(0.2f, 0.2f, 0.2f);
+    dirLight.ambient = glm::vec3(1.2f, 1.2f, 1.2f);
     dirLight.diffuse = glm::vec3(0.2f, 0.2f, 0.2f);
     dirLight.specular = glm::vec3(0.3f, 0.3f, 0.3f);
 
@@ -428,7 +434,7 @@ int main() {
 
     // render loop
     // -----------
-    rg::ServiceLocator::Get().getEventController().subscribeToEvent(rg::EventType::MouseMoved, &programState->camera);
+    //rg::ServiceLocator::Get().getEventController().subscribeToEvent(rg::EventType::MouseMoved, &programState->camera);
     rg::ServiceLocator::Get().getEventController().subscribeToEvent(rg::EventType::Keyboard, &programState->camera);
 
     while (!glfwWindowShouldClose(window)) {
@@ -458,8 +464,9 @@ int main() {
         glEnable(GL_DEPTH_TEST);
         // don't forget to enable shader before setting uniforms
 
+        glm::vec3 lightPos = glm::vec3(4.0 * cos(currentFrame), 4.0f, 4.0 * sin(currentFrame));
         ourShader.use();
-        pointLight.position = glm::vec3(4.0 * cos(currentFrame), 4.0f, 4.0 * sin(currentFrame));
+        pointLight.position = lightPos;
         ourShader.setVec3("pointLight.position", pointLight.position);
         ourShader.setVec3("pointLight.ambient", pointLight.ambient);
         ourShader.setVec3("pointLight.diffuse", pointLight.diffuse);
@@ -498,17 +505,13 @@ int main() {
 
         glm::mat4 projection = glm::perspective(glm::radians(80.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
         ourShader.setMat4("projection", projection);
-        glm::mat4 view = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-        float radius = 10.0f;
-        float camX   = sin(glfwGetTime()) * radius; //sin(glfwGetTime())
-        float camZ   = cos(glfwGetTime())* radius;
-        view = glm::lookAt(glm::vec3(camX, 0.0f, camZ), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 4.0f, 0.0f));
-        ourShader.setMat4("view", view);
 
+        glm::mat4 view = programState->camera.GetViewMatrix();
+        ourShader.setMat4("view", view);
         glBindVertexArray(VAO);
 
         glm::mat4 model3 = glm::mat4(1.0f);
-        model3 = glm::translate(model3, pointLight.position);
+        model3 = glm::translate(model3, lightPos);
         model3 = glm::scale(model3,glm::vec3(0.3f));
         cubeShader.setMat4("model3", model3);
         cubeShader.setMat4("view",view);
@@ -534,21 +537,9 @@ int main() {
 
         //texture objects
 
-        //plane
-        planeShader.use();
-        planeShader.setMat4("projection",projection);
-        planeShader.setMat4("view",view);
-        glBindVertexArray(planeVAO);
-        glBindTexture(GL_TEXTURE_2D, planeTexture);
-        model = glm::mat4(1.0f);
-        model = glm::translate(model,programState->planePosition);
-        model = glm::scale(model,glm::vec3(3.0f));
-        planeShader.setMat4("model", model);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-
         // vegetation
         shader.use();
-        model = glm::mat4(1.0f);
+        glm::mat4 model7 = glm::mat4(1.0f);
         shader.setMat4("projection", projection);
         shader.setMat4("view", view);
 
@@ -556,11 +547,30 @@ int main() {
         glBindTexture(GL_TEXTURE_2D, transparentTexture);
         for (unsigned int i = 0; i < vegetation.size(); i++)
         {
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, vegetation[i]);
-            shader.setMat4("model", model);
+            model7 = glm::mat4(1.0f);
+            model7 = glm::translate(model7, vegetation[i]);
+            shader.setMat4("model7", model7);
             glDrawArrays(GL_TRIANGLES, 0, 6);
         }
+        //plane
+        planeShader.use();
+        planeShader.setMat4("projection",projection);
+        planeShader.setMat4("view",view);
+
+        model = glm::mat4(1.0f);
+        model = glm::translate(model,programState->planePosition);
+        model = glm::scale(model,glm::vec3(3.0f));
+        planeShader.setMat4("model", model);
+        planeShader.setVec3("viewPos", programState->camera.Position);
+        planeShader.setVec3("lightPos", lightPos);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, diffuseMap);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, normalMap);
+        renderQuad();
+
+        screenShader.use();
+        screenShader.setBool("grayScaleInd",programState->grayScaleInd);
 
 
         // 2. now blit multisampled buffer(s) to normal colorbuffer of intermediate FBO. Image is stored in screenTexture
@@ -604,10 +614,107 @@ int main() {
     glDeleteVertexArrays(1,&transparentVAO);
     glDeleteBuffers(1,&VBO);
     glDeleteBuffers(1,&transparentVBO);
+    glDeleteVertexArrays(1,&quadVAO);
+    glDeleteBuffers(1,&quadVBO);
     // glfw: terminate, clearing all previously allocated GLFW resources.
     // ------------------------------------------------------------------
     glfwTerminate();
     return 0;
+}
+
+//normal mapping
+unsigned int quadVAO = 0;
+unsigned int quadVBO;
+void renderQuad() {
+    if (quadVAO == 0) {
+        // positions
+        glm::vec3 pos1(3.0f, -0.5f, 3.0f);
+        glm::vec3 pos2(-3.0f, -0.5f, 3.0f);
+        glm::vec3 pos3(-3.0f, -0.5f, -3.0f);
+        glm::vec3 pos4(3.0f, -0.5f, -3.0f);
+        // texture coordinates
+        glm::vec2 uv1(2.0f, 0.0f);
+        glm::vec2 uv2(0.0f, 0.0f);
+        glm::vec2 uv3(0.0f, 2.0f);
+        glm::vec2 uv4(2.0f, 2.0f);
+        // normal vector
+        glm::vec3 nm(0.0f, 0.0f, 1.0f);
+
+        // calculate tangent/bitangent vectors of both triangles
+        glm::vec3 tangent1, bitangent1;
+        glm::vec3 tangent2, bitangent2;
+        // triangle 1
+        // ----------
+        glm::vec3 edge1 = pos2 - pos1;
+        glm::vec3 edge2 = pos3 - pos1;
+        glm::vec2 deltaUV1 = uv2 - uv1;
+        glm::vec2 deltaUV2 = uv3 - uv1;
+
+        float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+
+        tangent1.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
+        tangent1.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
+        tangent1.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
+
+        bitangent1.x = f * (-deltaUV2.x * edge1.x + deltaUV1.x * edge2.x);
+        bitangent1.y = f * (-deltaUV2.x * edge1.y + deltaUV1.x * edge2.y);
+        bitangent1.z = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
+
+        // triangle 2
+        // ----------
+        edge1 = pos3 - pos1;
+        edge2 = pos4 - pos1;
+        deltaUV1 = uv3 - uv1;
+        deltaUV2 = uv4 - uv1;
+
+        f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+
+        tangent2.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
+        tangent2.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
+        tangent2.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
+
+
+        bitangent2.x = f * (-deltaUV2.x * edge1.x + deltaUV1.x * edge2.x);
+        bitangent2.y = f * (-deltaUV2.x * edge1.y + deltaUV1.x * edge2.y);
+        bitangent2.z = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
+
+
+        float quadVertices[] = {
+                // positions            // normal         // texcoords  // tangent                          // bitangent
+                pos1.x, pos1.y, pos1.z, nm.x, nm.y, nm.z, uv1.x, uv1.y, tangent1.x, tangent1.y, tangent1.z,
+                bitangent1.x, bitangent1.y, bitangent1.z,
+                pos2.x, pos2.y, pos2.z, nm.x, nm.y, nm.z, uv2.x, uv2.y, tangent1.x, tangent1.y, tangent1.z,
+                bitangent1.x, bitangent1.y, bitangent1.z,
+                pos3.x, pos3.y, pos3.z, nm.x, nm.y, nm.z, uv3.x, uv3.y, tangent1.x, tangent1.y, tangent1.z,
+                bitangent1.x, bitangent1.y, bitangent1.z,
+
+                pos1.x, pos1.y, pos1.z, nm.x, nm.y, nm.z, uv1.x, uv1.y, tangent2.x, tangent2.y, tangent2.z,
+                bitangent2.x, bitangent2.y, bitangent2.z,
+                pos3.x, pos3.y, pos3.z, nm.x, nm.y, nm.z, uv3.x, uv3.y, tangent2.x, tangent2.y, tangent2.z,
+                bitangent2.x, bitangent2.y, bitangent2.z,
+                pos4.x, pos4.y, pos4.z, nm.x, nm.y, nm.z, uv4.x, uv4.y, tangent2.x, tangent2.y, tangent2.z,
+                bitangent2.x, bitangent2.y, bitangent2.z
+        };
+        // configure plane VAO
+        glGenVertexArrays(1, &quadVAO);
+        glGenBuffers(1, &quadVBO);
+        glBindVertexArray(quadVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void *) 0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void *) (3 * sizeof(float)));
+        glEnableVertexAttribArray(2);
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void *) (6 * sizeof(float)));
+        glEnableVertexAttribArray(3);
+        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void *) (8 * sizeof(float)));
+        glEnableVertexAttribArray(4);
+        glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void *) (11 * sizeof(float)));
+    }
+    glBindVertexArray(quadVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    glBindVertexArray(0);
 }
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
@@ -654,7 +761,9 @@ void scroll_callback(GLFWwindow *window, double xoffset, double yoffset) {
 #else
     rg::ServiceLocator::Get().getInputController().processMouseScrollCallback(yoffset);
 #endif
+
 }
+
 
 void DrawImGui(ProgramState *programState) {
     ImGui_ImplOpenGL3_NewFrame();
@@ -675,6 +784,7 @@ void DrawImGui(ProgramState *programState) {
         ImGui::InputFloat("Table scale",(float*)&programState->tableScale,0.03f,0.2);
 
         ImGui::InputFloat3("Plane position",(float *)&programState->planePosition,0);
+        ImGui::InputFloat3("Camera position",(float *)&programState->camera.Position);
 
         ImGui::DragFloat("pointLight.constant", &programState->pointLight.constant, 0.05, 0.0, 1.0);
         ImGui::DragFloat("pointLight.linear", &programState->pointLight.linear, 0.05, 0.0, 1.0);
@@ -697,7 +807,6 @@ void DrawImGui(ProgramState *programState) {
 }
 
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods) {
-#if 0
     if (key == GLFW_KEY_F1 && action == GLFW_PRESS) {
         programState->ImGuiEnabled = !programState->ImGuiEnabled;
         if (programState->ImGuiEnabled) {
@@ -707,10 +816,59 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
         }
     }
-#else
-    rg::ServiceLocator::Get().getInputController().processKeyCallback(window, key, action);
-#endif
+
+    if(glfwGetKey(window,GLFW_KEY_1) == GLFW_PRESS){
+        programState->Blinn = true;
+    }else if(glfwGetKey(window,GLFW_KEY_B) == GLFW_RELEASE){
+        programState->Blinn = false;
+    }
+
+    if(glfwGetKey(window,GLFW_KEY_2) == GLFW_PRESS) {
+        PointLight &pointLight = programState->pointLight;
+        if (programState->pointLightInd) {
+            //disable point light
+            pointLight.ambient = glm::vec3(0.0, 0.0, 0.0);
+            pointLight.diffuse = glm::vec3(0.0, 0.0, 0.0);
+            pointLight.specular = glm::vec3(0.0, 0.0, 0.0);
+            programState->pointLightInd = false;
+        }else{
+            pointLight.ambient = glm::vec3(0.1, 0.1, 0.1);
+            pointLight.diffuse = glm::vec3(0.8, 0.8, 0.8);
+            pointLight.specular = glm::vec3(1.0, 1.0, 1.0);
+            programState->pointLightInd = true;
+        }
+    }
+       if(glfwGetKey(window,GLFW_KEY_3) == GLFW_PRESS){
+          //enable or disable gray scale
+          if(programState->grayScaleInd){
+              programState->grayScaleInd = false;
+          }else{
+              programState->grayScaleInd = true;
+          }
+       }
+
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+            programState->camera.ProcessKeyboard(Direction::FORWARD,deltaTime);
+        }
+
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS){
+            programState->camera.ProcessKeyboard(Direction::BACKWARD,deltaTime);
+        }
+
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+            programState->camera.ProcessKeyboard(Direction::RIGHT,deltaTime);
+        }
+
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+            programState->camera.ProcessKeyboard(Direction::LEFT,deltaTime);
+        }
+
+
+
+   // rg::ServiceLocator::Get().getInputController().processKeyCallback(window, key, action);
+
 }
+
 
 unsigned int loadTexture(char const * path)
 {

@@ -5,11 +5,13 @@
 #include "rg/event_controller.h"
 #include "rg/service_locator.h"
 #include <algorithm>
+#include <rg/Camera.h>
 
 namespace rg {
 void InputController::processKeyCallback(GLFWwindow* window, int key, int action) {
     auto& keyState = m_keys[key];
     keyState.glfwKeyAction = action;
+
 }
 
 void InputController::update(float dt) {
