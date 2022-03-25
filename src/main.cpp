@@ -70,6 +70,7 @@ struct ProgramState {
     Camera camera;
     bool CameraMouseMovementUpdateEnabled = true;
 
+    //positions
     glm::vec3 plantPosition = glm::vec3(0.5f,0.7f,0.1f);
     glm::vec3 tablePosition = glm::vec3(-0.6f);
     glm::vec3 planePosition = glm::vec3(0.5f,0.5f,0.5f);
@@ -214,7 +215,7 @@ int main() {
     Shader cubeShader("resources/shaders/lightCube.vs","resources/shaders/lightCube.fs");
     Shader shader("resources/shaders/blending.vs","resources/shaders/blending.fs");
     Shader screenShader("resources/shaders/screen.vs","resources/shaders/screen.fs");
-    Shader planeShader("resources/shaders/plane.vs","resources/shaders/plane.fs"); //normal mapping
+    Shader planeShader("resources/shaders/plane.vs","resources/shaders/plane.fs");
 
     float cubeVertices[] = {
             -0.5f, -0.5f, -0.5f,
@@ -223,35 +224,35 @@ int main() {
             0.5f,  0.5f, -0.5f,
             -0.5f,  0.5f, -0.5f,
             -0.5f, -0.5f, -0.5f,
-            // front face
+
             -0.5f, -0.5f,  0.5f,
             0.5f,  0.5f,  0.5f,
             0.5f, -0.5f,  0.5f,
             0.5f,  0.5f,  0.5f,
             -0.5f, -0.5f,  0.5f,
             -0.5f,  0.5f,  0.5f,
-            // left face
+
             -0.5f,  0.5f,  0.5f,
             -0.5f, -0.5f, -0.5f,
             -0.5f,  0.5f, -0.5f,
             -0.5f, -0.5f, -0.5f,
             -0.5f,  0.5f,  0.5f,
             -0.5f, -0.5f,  0.5f,
-            // right face
+
             0.5f,  0.5f,  0.5f,
             0.5f,  0.5f, -0.5f,
             0.5f, -0.5f, -0.5f,
             0.5f, -0.5f, -0.5f,
             0.5f, -0.5f,  0.5f,
             0.5f,  0.5f,  0.5f,
-            // bottom face
+
             -0.5f, -0.5f, -0.5f,
             0.5f, -0.5f,  0.5f,
             0.5f, -0.5f, -0.5f,
             0.5f, -0.5f,  0.5f,
             -0.5f, -0.5f, -0.5f,
             -0.5f, -0.5f,  0.5f,
-            // top face
+
             -0.5f,  0.5f, -0.5f,
             0.5f,  0.5f, -0.5f,
             0.5f,  0.5f,  0.5f,
@@ -261,7 +262,7 @@ int main() {
     };
 
     float transparentVertices[] = {
-            // positions         // texture Coords (swapped y coordinates because texture is flipped upside down)
+            // positions                       // texture Coords
             0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
             0.0f, -0.5f,  0.0f,  0.0f,  1.0f,
             1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
@@ -272,7 +273,7 @@ int main() {
     };
 
     float quadVertices[] = {   // vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
-            // positions   // texCoords
+            // positions            // texCoords
             -1.0f,  1.0f,  0.0f, 1.0f,
             -1.0f, -1.0f,  0.0f, 0.0f,
             1.0f, -1.0f,  1.0f, 0.0f,
@@ -395,7 +396,7 @@ int main() {
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, screenTexture, 0);	// we only need a color buffer
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, screenTexture, 0);
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         cout << "ERROR::FRAMEBUFFER:: Intermediate framebuffer is not complete!" << endl;
@@ -414,7 +415,7 @@ int main() {
     PointLight& pointLight = programState->pointLight;
     pointLight.ambient = glm::vec3(0.1, 0.1, 0.1);
     pointLight.diffuse = glm::vec3(0.8, 0.8, 0.8);
-    pointLight.specular = glm::vec3(1.0, 1.0, 1.0);
+    pointLight.specular = glm::vec3(0.7, 0.7, 0.7);
 
     pointLight.constant = 0.5f;
     pointLight.linear = 0.09f;
@@ -423,7 +424,7 @@ int main() {
     DirLight& dirLight = programState->dirLight;
 
     dirLight.direction = glm::vec3(-0.2f, -1.0f, -0.3f);
-    dirLight.ambient = glm::vec3(1.2f, 1.2f, 1.2f);
+    dirLight.ambient = glm::vec3(0.5f, 0.5f, 0.5f);
     dirLight.diffuse = glm::vec3(0.2f, 0.2f, 0.2f);
     dirLight.specular = glm::vec3(0.3f, 0.3f, 0.3f);
 
@@ -695,7 +696,7 @@ void renderQuad() {
                 pos4.x, pos4.y, pos4.z, nm.x, nm.y, nm.z, uv4.x, uv4.y, tangent2.x, tangent2.y, tangent2.z,
                 bitangent2.x, bitangent2.y, bitangent2.z
         };
-        // configure plane VAO
+        // plane VAO
         glGenVertexArrays(1, &quadVAO);
         glGenBuffers(1, &quadVBO);
         glBindVertexArray(quadVAO);
@@ -862,10 +863,6 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
         if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
             programState->camera.ProcessKeyboard(Direction::LEFT,deltaTime);
         }
-
-
-
-   // rg::ServiceLocator::Get().getInputController().processKeyCallback(window, key, action);
 
 }
 

@@ -13,7 +13,7 @@ Project contains:
 **Group B:**
 - NORMAL MAPPING
 
-##Controls
+###Controls
 
 - WASD -> change camera position
 - 1 -> turn on/off Blinn-Phong
