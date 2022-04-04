@@ -12,6 +12,7 @@ Project contains:
 
 **Group B:**
 - NORMAL MAPPING
+- PARALLAX MAPPING
 
 # Controls
 
