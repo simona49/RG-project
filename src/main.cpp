@@ -82,7 +82,7 @@ struct ProgramState {
 
     float plantScale = 0.1f;
     float tableScale = 5.0f;
-    float heightScale = 0.07;
+    float heightScale = 0.08f;
 
     PointLight pointLight;
     DirLight dirLight;
@@ -655,7 +655,6 @@ void renderQuad() {
         glm::vec3 tangent1, bitangent1;
         glm::vec3 tangent2, bitangent2;
         // triangle 1
-        // ----------
         glm::vec3 edge1 = pos2 - pos1;
         glm::vec3 edge2 = pos3 - pos1;
         glm::vec2 deltaUV1 = uv2 - uv1;
@@ -674,7 +673,6 @@ void renderQuad() {
         bitangent1 = glm::normalize(bitangent1);
 
         // triangle 2
-        // ----------
         edge1 = pos3 - pos1;
         edge2 = pos4 - pos1;
         deltaUV1 = uv3 - uv1;

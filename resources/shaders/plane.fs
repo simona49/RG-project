@@ -17,19 +17,55 @@ uniform float heightScale;
 
 vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir)
 {
-    float height =  texture(depthMap, texCoords).r;
-    return texCoords - viewDir.xy * (height * heightScale);
+          const float minLayers = 8;
+          const float maxLayers = 32;
+          float numLayers = mix(maxLayers, minLayers, abs(dot(vec3(0.0, 0.0, 1.0), viewDir)));
+
+
+          //size of each layer
+          float layerDepth = 1.0 / numLayers;
+
+
+          //current layer depth
+          float currentLayerDepth = 0.0;
+          // the amount to shift the texture coordinates per layer
+          vec2 P = viewDir.xy / viewDir.z * heightScale;
+          vec2 deltaTexCoords = P / numLayers;
+
+          //initial values
+          vec2  currentTexCoords     = texCoords;
+          float currentDepthMapValue = texture(depthMap, currentTexCoords).r;
+
+          while(currentLayerDepth < currentDepthMapValue)
+          {
+              currentTexCoords -= deltaTexCoords;
+              currentDepthMapValue = texture(depthMap, currentTexCoords).r;
+              currentLayerDepth += layerDepth;
+          }
+
+          // get texture coordinates before collision
+          vec2 prevTexCoords = currentTexCoords + deltaTexCoords;
+
+
+          float afterDepth  = currentDepthMapValue - currentLayerDepth;
+          float beforeDepth = texture(depthMap, prevTexCoords).r - currentLayerDepth + layerDepth;
+
+          // interpolation of texture coordinates
+          float weight = afterDepth / (afterDepth - beforeDepth);
+          vec2 finalTexCoords = prevTexCoords * weight + currentTexCoords * (1.0 - weight);
+
+          return finalTexCoords;
 }
 
 void main()
 {
     // Parallax Mapping
     vec3 viewDir = normalize(fs_in.TangentViewPos - fs_in.TangentFragPos);
-    vec2 texCoords = fs_in.TexCoords;
+   vec2 texCoords = fs_in.TexCoords;
 
     texCoords = ParallaxMapping(fs_in.TexCoords,  viewDir);
     if(texCoords.x > 1.0 || texCoords.y > 1.0 || texCoords.x < 0.0 || texCoords.y < 0.0)
-        discard;
+      discard;
 
     //normal
     vec3 normal = texture(normalMap, texCoords).rgb;
