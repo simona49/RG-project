@@ -27,7 +27,7 @@ void processInput(GLFWwindow *window);
 
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods);
 
-unsigned int loadTexture(char const * path);
+auto loadTexture(char const * path) -> unsigned int;
 
 void renderQuad();
 
@@ -37,13 +37,13 @@ const unsigned int SCR_HEIGHT = 800;
 
 // camera
 
-float lastX = SCR_WIDTH / 2.0f;
-float lastY = SCR_HEIGHT / 2.0f;
+float lastX = SCR_WIDTH / 2.0F;
+float lastY = SCR_HEIGHT / 2.0F;
 bool firstMouse = true;
 
 // timing
-float deltaTime = 0.0f;
-float lastFrame = 0.0f;
+float deltaTime = 0.0F;
+float lastFrame = 0.0F;
 
 struct PointLight {
     glm::vec3 position;
@@ -65,35 +65,35 @@ struct DirLight {
 };
 
 struct ProgramState {
-    glm::vec3 clearColor = glm::vec3(0.7f,0.0f,0.3f);
+    glm::vec3 clearColor = glm::vec3(0.7F,0.0F,0.3F);
     bool ImGuiEnabled = true;
     Camera camera;
     bool CameraMouseMovementUpdateEnabled = true;
 
     //positions
-    glm::vec3 plantPosition = glm::vec3(0.5f,0.7f,0.1f);
-    glm::vec3 tablePosition = glm::vec3(-0.6f);
-    glm::vec3 planePosition = glm::vec3(0.5f,0.5f,0.5f);
+    glm::vec3 plantPosition = glm::vec3(0.5F,0.7F,0.1F);
+    glm::vec3 tablePosition = glm::vec3(-0.6F);
+    glm::vec3 planePosition = glm::vec3(0.5F,0.5F,0.5F);
 
     //indicators
     bool Blinn = true;
     bool pointLightInd = true;
     bool grayScaleInd = false;
 
-    float plantScale = 0.1f;
-    float tableScale = 5.0f;
-    float heightScale = 0.08f;
+    float plantScale = 0.1F;
+    float tableScale = 5.0F;
+    float heightScale = 0.08F;
 
     PointLight pointLight;
     DirLight dirLight;
     ProgramState()
-            : camera(glm::vec3(0.0f, 0.0f, 1.0f)) {}
+            : camera(glm::vec3(0.0F, 0.0F, 1.0F)) {}
 
-    void SaveToFile(std::string filename);
+    void SaveToFile(std::string filename) const;
     void LoadFromFile(std::string filename);
 };
 
-void ProgramState::SaveToFile(std::string filename) {
+void ProgramState::SaveToFile(std::string filename) const {
     std::ofstream out(filename);
     out << clearColor.r << '\n'
         << clearColor.g << '\n'
@@ -149,7 +149,7 @@ ProgramState *programState;
 
 void DrawImGui(ProgramState *programState);
 
-int main() {
+auto main() -> int {
     // glfw: initialize and configure
     // ------------------------------
     glfwInit();
@@ -164,8 +164,8 @@ int main() {
 
     // glfw window creation
     // --------------------
-    GLFWwindow *window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
-    if (window == NULL) {
+    GLFWwindow *window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", nullptr, nullptr);
+    if (window == nullptr) {
         std::cout << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
         return -1;
@@ -181,13 +181,13 @@ int main() {
 
     // glad: load all OpenGL function pointers
     // ---------------------------------------
-    if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress)) {
+    if (gladLoadGLLoader((GLADloadproc) glfwGetProcAddress) == 0) {
         std::cout << "Failed to initialize GLAD" << std::endl;
         return -1;
     }
 
     // tell stb_image.h to flip loaded texture's on the y-axis (before loading model).
-    stbi_set_flip_vertically_on_load(true);
+    stbi_set_flip_vertically_on_load(1);
 
     programState = new ProgramState;
     programState->LoadFromFile("resources/program_state.txt");
@@ -219,122 +219,124 @@ int main() {
     Shader planeShader("resources/shaders/plane.vs","resources/shaders/plane.fs");
 
     float cubeVertices[] = {
-            -0.5f, -0.5f, -0.5f,
-            0.5f, -0.5f, -0.5f,
-            0.5f,  0.5f, -0.5f,
-            0.5f,  0.5f, -0.5f,
-            -0.5f,  0.5f, -0.5f,
-            -0.5f, -0.5f, -0.5f,
+            -0.5F, -0.5F, -0.5F,
+            0.5F, -0.5F, -0.5F,
+            0.5F,  0.5F, -0.5F,
+            0.5F,  0.5F, -0.5F,
+            -0.5F,  0.5F, -0.5F,
+            -0.5F, -0.5F, -0.5F,
 
-            -0.5f, -0.5f,  0.5f,
-            0.5f,  0.5f,  0.5f,
-            0.5f, -0.5f,  0.5f,
-            0.5f,  0.5f,  0.5f,
-            -0.5f, -0.5f,  0.5f,
-            -0.5f,  0.5f,  0.5f,
+            -0.5F, -0.5F,  0.5F,
+            0.5F,  0.5F,  0.5F,
+            0.5F, -0.5F,  0.5F,
+            0.5F,  0.5F,  0.5F,
+            -0.5F, -0.5F,  0.5F,
+            -0.5F,  0.5F,  0.5F,
 
-            -0.5f,  0.5f,  0.5f,
-            -0.5f, -0.5f, -0.5f,
-            -0.5f,  0.5f, -0.5f,
-            -0.5f, -0.5f, -0.5f,
-            -0.5f,  0.5f,  0.5f,
-            -0.5f, -0.5f,  0.5f,
+            -0.5F,  0.5F,  0.5F,
+            -0.5F, -0.5F, -0.5F,
+            -0.5F,  0.5F, -0.5F,
+            -0.5F, -0.5F, -0.5F,
+            -0.5F,  0.5F,  0.5F,
+            -0.5F, -0.5F,  0.5F,
 
-            0.5f,  0.5f,  0.5f,
-            0.5f,  0.5f, -0.5f,
-            0.5f, -0.5f, -0.5f,
-            0.5f, -0.5f, -0.5f,
-            0.5f, -0.5f,  0.5f,
-            0.5f,  0.5f,  0.5f,
+            0.5F,  0.5F,  0.5F,
+            0.5F,  0.5F, -0.5F,
+            0.5F, -0.5F, -0.5F,
+            0.5F, -0.5F, -0.5F,
+            0.5F, -0.5F,  0.5F,
+            0.5F,  0.5F,  0.5F,
 
-            -0.5f, -0.5f, -0.5f,
-            0.5f, -0.5f,  0.5f,
-            0.5f, -0.5f, -0.5f,
-            0.5f, -0.5f,  0.5f,
-            -0.5f, -0.5f, -0.5f,
-            -0.5f, -0.5f,  0.5f,
+            -0.5F, -0.5F, -0.5F,
+            0.5F, -0.5F,  0.5F,
+            0.5F, -0.5F, -0.5F,
+            0.5F, -0.5F,  0.5F,
+            -0.5F, -0.5F, -0.5F,
+            -0.5F, -0.5F,  0.5F,
 
-            -0.5f,  0.5f, -0.5f,
-            0.5f,  0.5f, -0.5f,
-            0.5f,  0.5f,  0.5f,
-            0.5f,  0.5f,  0.5f,
-            -0.5f,  0.5f,  0.5f,
-            -0.5f,  0.5f, -0.5f
+            -0.5F,  0.5F, -0.5F,
+            0.5F,  0.5F, -0.5F,
+            0.5F,  0.5F,  0.5F,
+            0.5F,  0.5F,  0.5F,
+            -0.5F,  0.5F,  0.5F,
+            -0.5F,  0.5F, -0.5F
     };
 
     float transparentVertices[] = {
             // positions                       // texture Coords
-            0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
-            0.0f, -0.5f,  0.0f,  0.0f,  1.0f,
-            1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
+            0.0F,  0.5F,  0.0F,  0.0F,  0.0F,
+            0.0F, -0.5F,  0.0F,  0.0F,  1.0F,
+            1.0F, -0.5F,  0.0F,  1.0F,  1.0F,
 
-            0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
-            1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
-            1.0f,  0.5f,  0.0f,  1.0f,  0.0f
+            0.0F,  0.5F,  0.0F,  0.0F,  0.0F,
+            1.0F, -0.5F,  0.0F,  1.0F,  1.0F,
+            1.0F,  0.5F,  0.0F,  1.0F,  0.0F
     };
 
     float quadVertices[] = {   // vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
             // positions            // texCoords
-            -1.0f,  1.0f,  0.0f, 1.0f,
-            -1.0f, -1.0f,  0.0f, 0.0f,
-            1.0f, -1.0f,  1.0f, 0.0f,
+            -1.0F,  1.0F,  0.0F, 1.0F,
+            -1.0F, -1.0F,  0.0F, 0.0F,
+            1.0F, -1.0F,  1.0F, 0.0F,
 
-            -1.0f,  1.0f,  0.0f, 1.0f,
-            1.0f, -1.0f,  1.0f, 0.0f,
-            1.0f,  1.0f,  1.0f, 1.0f
+            -1.0F,  1.0F,  0.0F, 1.0F,
+            1.0F, -1.0F,  1.0F, 0.0F,
+            1.0F,  1.0F,  1.0F, 1.0F
     };
 
     //light cube
-    unsigned int VAO,VBO;
+    unsigned int VAO;
+    unsigned int VBO;
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), &cubeVertices, GL_STATIC_DRAW);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)nullptr);
 
     // transparent VAO
-    unsigned int transparentVAO, transparentVBO;
+    unsigned int transparentVAO;
+    unsigned int transparentVBO;
     glGenVertexArrays(1, &transparentVAO);
     glGenBuffers(1, &transparentVBO);
     glBindVertexArray(transparentVAO);
     glBindBuffer(GL_ARRAY_BUFFER, transparentVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(transparentVertices), transparentVertices, GL_STATIC_DRAW);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)nullptr);
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
     glBindVertexArray(0);
 
     vector<glm::vec3> vegetation
             {
-                    glm::vec3(-1.5f, -1.6f, -0.48f),
-                    glm::vec3( 1.5f, -1.6f, 0.51f),
-                    glm::vec3( -3.0f, -1.6f, 0.7f),
-                    glm::vec3(-0.3f, -1.6f, -2.3f),
-                    glm::vec3(5.5f, -1.6f, -0.6f),
-                    glm::vec3(2.0f,-1.6f,2.9f),
-                    glm::vec3(2.5f,-1.6f,-2.0f),
-                    glm::vec3(2.5f,-1.6f,-6.0f),
-                    glm::vec3(0.0f,-1.6f,-6.0f),
-                    glm::vec3(-2.5f,-1.6f,-6.0f),
-                    glm::vec3(-5.0f,-1.6f,-7.0f),
-                    glm::vec3(-8.0f,-1.6f,-8.0f),
-                    glm::vec3(-7.5f,-1.6f,-4.0f),
-                    glm::vec3(-5.0f,-1.6f,-2.0f),
-                    glm::vec3(-8.5f,-1.6f,0.0f),
-                    glm::vec3(-6.0f,-1.6f,2.0f),
-                    glm::vec3(-4.5f,-1.6f,5.0f),
-                    glm::vec3(-8.5f,-1.6f,3.0f),
-                    glm::vec3(-2.5f,-1.6f,3.0f),
-                    glm::vec3(0.0f,-1.6f,5.0f),
-                    glm::vec3(0.0f,-1.6f,2.5f),
-                    glm::vec3(6.0f,-1.6f,5.5f),
-                    glm::vec3(4.5f,-1.6f,4.0f),
-                    glm::vec3(3.5f,-1.6f,2.0f),
-                    glm::vec3(4.5f,-1.6f,-3.0f),
-                    glm::vec3(5.5f,-1.6f,-6.0f),
+                    glm::vec3(-1.5F, -1.6F, -0.48F),
+                    glm::vec3( 1.5F, -1.6F, 0.51F),
+                    glm::vec3( -3.0F, -1.6F, 0.7F),
+                    glm::vec3(-0.3F, -1.6F, -2.3F),
+                    glm::vec3(5.5F, -1.6F, -0.6F),
+                    glm::vec3(2.0F,-1.6F,2.9F),
+                    glm::vec3(2.5F,-1.6F,-2.0F),
+                    glm::vec3(2.5F,-1.6F,-6.0F),
+                    glm::vec3(0.0F,-1.6F,-6.0F),
+                    glm::vec3(-2.5F,-1.6F,-6.0F),
+                    glm::vec3(-5.0F,-1.6F,-7.0F),
+                    glm::vec3(-8.0F,-1.6F,-8.0F),
+                    glm::vec3(-7.5F,-1.6F,-4.0F),
+                    glm::vec3(-5.0F,-1.6F,-2.0F),
+                    glm::vec3(-8.5F,-1.6F,0.0F),
+                    glm::vec3(-6.0F,-1.6F,2.0F),
+                    glm::vec3(-4.5F,-1.6F,5.0F),
+                    glm::vec3(-8.5F,-1.6F,3.0F),
+                    glm::vec3(-2.5F,-1.6F,3.0F),
+                    glm::vec3(0.0F,-1.6F,5.0F),
+                    glm::vec3(0.0F,-1.6F,2.5F),
+                    glm::vec3(6.0F,-1.6F,5.5F),
+                    glm::vec3(4.5F,-1.6F,4.0F),
+                    glm::vec3(3.5F,-1.6F,2.0F),
+                    glm::vec3(4.5F,-1.6F,-3.0F),
+                    glm::vec3(5.5F,-1.6F,-6.0F),
             };
 
     //loading textures
@@ -352,14 +354,15 @@ int main() {
     planeShader.setInt("depthMap",2);
 
     // setup screen VAO
-    unsigned int quadVAO, quadVBO;
+    unsigned int quadVAO;
+    unsigned int quadVBO;
     glGenVertexArrays(1, &quadVAO);
     glGenBuffers(1, &quadVBO);
     glBindVertexArray(quadVAO);
     glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)nullptr);
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
 
@@ -383,8 +386,9 @@ int main() {
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
 
     //check if framebuffer is completed
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
         cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << endl;
+}
     //deactivate framebuffer
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -396,13 +400,14 @@ int main() {
     unsigned int screenTexture;
     glGenTextures(1, &screenTexture);
     glBindTexture(GL_TEXTURE_2D, screenTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, screenTexture, 0);
 
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
         cout << "ERROR::FRAMEBUFFER:: Intermediate framebuffer is not complete!" << endl;
+}
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
@@ -420,16 +425,16 @@ int main() {
     pointLight.diffuse = glm::vec3(0.8, 0.8, 0.8);
     pointLight.specular = glm::vec3(0.7, 0.7, 0.7);
 
-    pointLight.constant = 0.5f;
-    pointLight.linear = 0.09f;
-    pointLight.quadratic = 0.032f;
+    pointLight.constant = 0.5F;
+    pointLight.linear = 0.09F;
+    pointLight.quadratic = 0.032F;
 
     DirLight& dirLight = programState->dirLight;
 
-    dirLight.direction = glm::vec3(-0.2f, -1.0f, -0.3f);
-    dirLight.ambient = glm::vec3(0.5f, 0.5f, 0.5f);
-    dirLight.diffuse = glm::vec3(0.2f, 0.2f, 0.2f);
-    dirLight.specular = glm::vec3(0.3f, 0.3f, 0.3f);
+    dirLight.direction = glm::vec3(-0.2F, -1.0F, -0.3F);
+    dirLight.ambient = glm::vec3(0.5F, 0.5F, 0.5F);
+    dirLight.diffuse = glm::vec3(0.2F, 0.2F, 0.2F);
+    dirLight.specular = glm::vec3(0.3F, 0.3F, 0.3F);
 
 
     auto &initServiceLocator = rg::ServiceLocator::Get();
@@ -441,7 +446,7 @@ int main() {
     //rg::ServiceLocator::Get().getEventController().subscribeToEvent(rg::EventType::MouseMoved, &programState->camera);
     rg::ServiceLocator::Get().getEventController().subscribeToEvent(rg::EventType::Keyboard, &programState->camera);
 
-    while (!glfwWindowShouldClose(window)) {
+    while (glfwWindowShouldClose(window) == 0) {
         // per-frame time logic
         // --------------------
         float currentFrame = glfwGetTime();
@@ -459,16 +464,16 @@ int main() {
 
         // render
         // ------
-        glClearColor(programState->clearColor.r, programState->clearColor.g, programState->clearColor.b, 1.0f);
+        glClearColor(programState->clearColor.r, programState->clearColor.g, programState->clearColor.b, 1.0F);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-        glClearColor(programState->clearColor.r, programState->clearColor.g, programState->clearColor.b, 1.0f);
+        glClearColor(programState->clearColor.r, programState->clearColor.g, programState->clearColor.b, 1.0F);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glEnable(GL_DEPTH_TEST);
         // don't forget to enable shader before setting uniforms
 
-        glm::vec3 lightPos = glm::vec3(4.0 * cos(currentFrame), 4.0f, 4.0 * sin(currentFrame));
+        glm::vec3 lightPos = glm::vec3(4.0 * cos(currentFrame), 4.0F, 4.0 * sin(currentFrame));
         ourShader.use();
         pointLight.position = lightPos;
         ourShader.setVec3("pointLight.position", pointLight.position);
@@ -485,7 +490,7 @@ int main() {
         ourShader.setVec3("dirLight.specular", dirLight.specular);
 
         ourShader.setVec3("viewPosition", programState->camera.Position);
-        ourShader.setFloat("material.shininess", 32.0f);
+        ourShader.setFloat("material.shininess", 32.0F);
         ourShader.setBool("Blinn",programState->Blinn);
 
         tableShader.use();
@@ -494,7 +499,7 @@ int main() {
         tableShader.setVec3("dirLight.diffuse", dirLight.diffuse);
         tableShader.setVec3("dirLight.specular", dirLight.specular);
         tableShader.setVec3("viewPosition", programState->camera.Position);
-        tableShader.setFloat("material.shininess", 32.0f);
+        tableShader.setFloat("material.shininess", 32.0F);
         tableShader.setBool("Blinn",programState->Blinn);
 
         tableShader.setVec3("pointLight.position", pointLight.position);
@@ -507,16 +512,16 @@ int main() {
 
         // view/projection transformations
 
-        glm::mat4 projection = glm::perspective(glm::radians(80.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+        glm::mat4 projection = glm::perspective(glm::radians(80.0F), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1F, 100.0F);
         ourShader.setMat4("projection", projection);
 
         glm::mat4 view = programState->camera.GetViewMatrix();
         ourShader.setMat4("view", view);
         glBindVertexArray(VAO);
 
-        glm::mat4 model3 = glm::mat4(1.0f);
+        glm::mat4 model3 = glm::mat4(1.0F);
         model3 = glm::translate(model3, lightPos);
-        model3 = glm::scale(model3,glm::vec3(0.3f));
+        model3 = glm::scale(model3,glm::vec3(0.3F));
         cubeShader.setMat4("model3", model3);
         cubeShader.setMat4("view",view);
         cubeShader.setMat4("projection",projection);
@@ -526,14 +531,14 @@ int main() {
         glDisable(GL_CULL_FACE);
 
         // render the loaded model
-        glm::mat4 model = glm::mat4(0.7f);
+        glm::mat4 model = glm::mat4(0.7F);
         model = glm::translate(model,
                                programState->plantPosition); // translate it down so it's at the center of the scene
         model = glm::scale(model, glm::vec3(programState->plantScale));    // it's a bit too big for our scene, so scale it down
         ourShader.setMat4("model", model);
         ourModel.Draw(ourShader);
 
-        glm::mat4 model2 =  glm::mat4(3.0f);
+        glm::mat4 model2 =  glm::mat4(3.0F);
         model2 = glm::translate(model2,programState->tablePosition);
         model2 = glm::scale(model2,glm::vec3(programState->tableScale));
         tableShader.setMat4("model2",model2);
@@ -543,16 +548,16 @@ int main() {
 
         // vegetation
         shader.use();
-        glm::mat4 model7 = glm::mat4(1.0f);
+        glm::mat4 model7 = glm::mat4(1.0F);
         shader.setMat4("projection", projection);
         shader.setMat4("view", view);
 
         glBindVertexArray(transparentVAO);
         glBindTexture(GL_TEXTURE_2D, transparentTexture);
-        for (unsigned int i = 0; i < vegetation.size(); i++)
+        for (auto i : vegetation)
         {
-            model7 = glm::mat4(1.0f);
-            model7 = glm::translate(model7, vegetation[i]);
+            model7 = glm::mat4(1.0F);
+            model7 = glm::translate(model7, i);
             shader.setMat4("model7", model7);
             glDrawArrays(GL_TRIANGLES, 0, 6);
         }
@@ -561,9 +566,9 @@ int main() {
         planeShader.setMat4("projection",projection);
         planeShader.setMat4("view",view);
 
-        model = glm::mat4(1.0f);
+        model = glm::mat4(1.0F);
         model = glm::translate(model,programState->planePosition);
-        model = glm::scale(model,glm::vec3(6.1f));
+        model = glm::scale(model,glm::vec3(6.1F));
         planeShader.setMat4("model", model);
         planeShader.setVec3("viewPos", programState->camera.Position);
         planeShader.setVec3("lightPos", lightPos);
@@ -588,7 +593,7 @@ int main() {
 
         // 3. now render quad with scene's visuals as its texture image
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+        glClearColor(1.0F, 1.0F, 1.0F, 1.0F);
         glClear(GL_COLOR_BUFFER_BIT);
         glDisable(GL_DEPTH_TEST);
 
@@ -601,8 +606,9 @@ int main() {
 
 
 
-        if (programState->ImGuiEnabled)
+        if (programState->ImGuiEnabled) {
             DrawImGui(programState);
+}
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
@@ -639,28 +645,30 @@ unsigned int quadVBO;
 void renderQuad() {
     if (quadVAO == 0) {
         // positions
-        glm::vec3 pos1(3.0f, -0.5f, 3.0f);
-        glm::vec3 pos2(-3.0f, -0.5f, 3.0f);
-        glm::vec3 pos3(-3.0f, -0.5f, -3.0f);
-        glm::vec3 pos4(3.0f, -0.5f, -3.0f);
+        glm::vec3 pos1(3.0F, -0.5F, 3.0F);
+        glm::vec3 pos2(-3.0F, -0.5F, 3.0F);
+        glm::vec3 pos3(-3.0F, -0.5F, -3.0F);
+        glm::vec3 pos4(3.0F, -0.5F, -3.0F);
         // texture coordinates
-        glm::vec2 uv1(2.0f, 0.0f);
-        glm::vec2 uv2(0.0f, 0.0f);
-        glm::vec2 uv3(0.0f, 2.0f);
-        glm::vec2 uv4(2.0f, 2.0f);
+        glm::vec2 uv1(2.0F, 0.0F);
+        glm::vec2 uv2(0.0F, 0.0F);
+        glm::vec2 uv3(0.0F, 2.0F);
+        glm::vec2 uv4(2.0F, 2.0F);
         // normal vector
-        glm::vec3 nm(0.0f, 0.0f, 1.0f);
+        glm::vec3 nm(0.0F, 0.0F, 1.0F);
 
         // calculate tangent/bitangent vectors of both triangles
-        glm::vec3 tangent1, bitangent1;
-        glm::vec3 tangent2, bitangent2;
+        glm::vec3 tangent1;
+        glm::vec3 bitangent1;
+        glm::vec3 tangent2;
+        glm::vec3 bitangent2;
         // triangle 1
         glm::vec3 edge1 = pos2 - pos1;
         glm::vec3 edge2 = pos3 - pos1;
         glm::vec2 deltaUV1 = uv2 - uv1;
         glm::vec2 deltaUV2 = uv3 - uv1;
 
-        float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+        float f = 1.0F / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
 
         tangent1.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
         tangent1.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
@@ -678,7 +686,7 @@ void renderQuad() {
         deltaUV1 = uv3 - uv1;
         deltaUV2 = uv4 - uv1;
 
-        f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+        f = 1.0F / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
 
         tangent2.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
         tangent2.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
@@ -714,7 +722,7 @@ void renderQuad() {
         glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
         glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
         glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void *) 0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void *) nullptr);
         glEnableVertexAttribArray(1);
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void *) (3 * sizeof(float)));
         glEnableVertexAttribArray(2);
@@ -784,18 +792,18 @@ void DrawImGui(ProgramState *programState) {
 
 
     {
-        static float f = 0.0f;
+        static float f = 0.0F;
         ImGui::Begin("Hello window");
         ImGui::Text("Hello text");
         ImGui::SliderFloat("Float slider", &f, 0.0, 1.0);
         ImGui::ColorEdit3("Background color", (float *) &programState->clearColor);
-        ImGui::InputFloat3("Plant position", (float*)&programState->plantPosition,0);
-        ImGui::InputFloat("Plant scale", &programState->plantScale,0.03f,0.2f);
+        ImGui::InputFloat3("Plant position", (float*)&programState->plantPosition,nullptr);
+        ImGui::InputFloat("Plant scale", &programState->plantScale,0.03F,0.2F);
 
-        ImGui::InputFloat3("Table position",(float *)&programState->tablePosition,0);
-        ImGui::InputFloat("Table scale",(float*)&programState->tableScale,0.03f,0.2);
+        ImGui::InputFloat3("Table position",(float *)&programState->tablePosition,nullptr);
+        ImGui::InputFloat("Table scale",(float*)&programState->tableScale,0.03F,0.2);
 
-        ImGui::InputFloat3("Plane position",(float *)&programState->planePosition,0);
+        ImGui::InputFloat3("Plane position",(float *)&programState->planePosition,nullptr);
         ImGui::InputFloat3("Camera position",(float *)&programState->camera.Position);
 
         ImGui::DragFloat("pointLight.constant", &programState->pointLight.constant, 0.05, 0.0, 1.0);
@@ -852,11 +860,7 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
     }
        if(glfwGetKey(window,GLFW_KEY_3) == GLFW_PRESS){
           //enable or disable gray scale
-          if(programState->grayScaleInd){
-              programState->grayScaleInd = false;
-          }else{
-              programState->grayScaleInd = true;
-          }
+          programState->grayScaleInd = !programState->grayScaleInd;
        }
 
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
@@ -878,22 +882,25 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
 }
 
 
-unsigned int loadTexture(char const * path)
+auto loadTexture(char const * path) -> unsigned int
 {
     unsigned int textureID;
     glGenTextures(1, &textureID);
 
-    int width, height, nrComponents;
+    int width;
+    int height;
+    int nrComponents;
     unsigned char *data = stbi_load(path, &width, &height, &nrComponents, 0);
-    if (data)
+    if (data != nullptr)
     {
         GLenum format = GL_RGBA;
-        if (nrComponents == 1)
+        if (nrComponents == 1) {
             format = GL_RED;
-        else if (nrComponents == 3)
+        } else if (nrComponents == 3) {
             format = GL_RGB;
-        else if (nrComponents == 4)
+        } else if (nrComponents == 4) {
             format = GL_RGBA;
+}
 
         glBindTexture(GL_TEXTURE_2D, textureID);
         glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
