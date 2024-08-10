@@ -140,8 +140,9 @@ void EventController::pushEvent(Event event) {
 }
 void EventController::subscribeToEvent(EventType eventType, Observer* observer) {
     auto& eventObservers = m_observers[eventType];
-    if (std::find(eventObservers.begin(), eventObservers.end(), observer) == eventObservers.end())
+    if (std::find(eventObservers.begin(), eventObservers.end(), observer) == eventObservers.end()) {
         eventObservers.push_back(observer);
+}
 }
 void EventController::unsubscribeFromEvent(EventType eventType, Observer* observer) {
     auto& eventObservers = m_observers[eventType];
