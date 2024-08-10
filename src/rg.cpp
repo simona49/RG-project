@@ -78,15 +78,15 @@ void InputController::processMouseScrollCallback(double ypos) {
     m_scroll.currentY = ypos;
 }
 
-InputController::KeyState InputController::getKeyState(int key) const {
+auto InputController::getKeyState(int key) const -> InputController::KeyState {
     auto it = m_keys.find(key);
     return it != m_keys.end() ? it->second.keyState : KeyState::Released;
 }
 
-glm::vec2 InputController::getMouseOffset() const {
+auto InputController::getMouseOffset() const -> glm::vec2 {
     double xoffset = m_mouse.currentX - m_mouse.lastX;
     double yoffset = m_mouse.lastY - m_mouse.currentY; // reversed since y-coordinates go from bottom to top
-    return glm::vec2(xoffset, yoffset);
+    return {xoffset, yoffset};
 }
 
 
@@ -162,7 +162,7 @@ void clearAllOpenGlErrors() {
         ;
     }
 }
-const char* openGLErrorToString(GLenum error) {
+auto openGLErrorToString(GLenum error) -> const char* {
     switch(error) {
         case GL_NO_ERROR: return "GL_NO_ERROR";
         case GL_INVALID_ENUM: return "GL_INVALID_ENUM";
@@ -173,7 +173,7 @@ const char* openGLErrorToString(GLenum error) {
     ASSERT(false, "Passed something that is not an error code");
     return "THIS_SHOULD_NEVER_HAPPEN";
 }
-bool wasPreviousOpenGLCallSuccessful(const char* file, int line, const char* call) {
+auto wasPreviousOpenGLCallSuccessful(const char* file, int line, const char* call) -> bool {
     bool success = true;
     while (GLenum error = glGetError()) {
         std::cerr << "[OpenGL error] " << error << " " << openGLErrorToString(error)
@@ -187,7 +187,7 @@ bool wasPreviousOpenGLCallSuccessful(const char* file, int line, const char* cal
 }
 
 
-const char* ToString(InputController::KeyState state) {
+auto ToString(InputController::KeyState state) -> const char* {
     using KeyState = InputController::KeyState;
     switch (state) {
         case KeyState::Released: return "Released";
