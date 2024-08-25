@@ -1,1 +1,2 @@
 Ovo je test radi proveravanja git hook-a.
+Drugi test.
